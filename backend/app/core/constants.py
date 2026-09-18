@@ -49,6 +49,27 @@ class IssueStatus(StrEnum):
     CLOSED = "已关闭"
 
 
+class EquipmentCategory(StrEnum):
+    TOOL = "保洁工具"
+    MACHINE = "机械设备"
+    VEHICLE = "车辆设备"
+    ELECTRICAL = "电器设备"
+    OTHER = "其他"
+
+
+class EquipmentStatus(StrEnum):
+    IN_USE = "在用"
+    REPAIRING = "维修中"
+    SCRAPPED = "已报废"
+
+
+class DisposalMethod(StrEnum):
+    RECYCLE = "回收处理"
+    SELL = "变卖处理"
+    DISCARD = "废弃处理"
+    OTHER = "其他"
+
+
 # 整改流转规则：当前状态 -> 允许流转到的状态
 ISSUE_TRANSITIONS: dict[str, list[str]] = {
     IssueStatus.PENDING: [IssueStatus.PROCESSING, IssueStatus.CLOSED],
@@ -97,3 +118,11 @@ OPEN_ISSUE_STATUSES: list[str] = [
 
 # 单检查项低于该分数视为不合格项
 INSPECTION_ITEM_PROBLEM_THRESHOLD = 6
+
+# 设备保养提醒：下次保养日期距今不超过该天数即视为「临近到期」
+MAINTENANCE_REMIND_DAYS = 7
+
+# 保养到期状态（由下次保养日期推算，用于列表筛选与看板提醒）
+MAINTENANCE_DUE_OVERDUE = "已逾期"
+MAINTENANCE_DUE_UPCOMING = "临近到期"
+MAINTENANCE_DUE_NORMAL = "正常"

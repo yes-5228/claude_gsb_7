@@ -1,7 +1,12 @@
-import { isOverdue, scoreTone, severityTone, statusTone } from '../utils/format.js';
+import { isOverdue, maintenanceDueTone, scoreTone, severityTone, statusTone } from '../utils/format.js';
 
 export function StatusTag({ status }) {
   return <span className={`tag ${statusTone(status)}`}>{status}</span>;
+}
+
+export function MaintenanceDueTag({ due }) {
+  if (!due) return null;
+  return <span className={`tag ${maintenanceDueTone(due)}`}>{due}</span>;
 }
 
 export function SeverityTag({ severity }) {

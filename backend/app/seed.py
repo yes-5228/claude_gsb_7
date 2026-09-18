@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.constants import (
     INSPECTION_CHECK_ITEMS,
+    DisposalMethod,
+    EquipmentCategory,
     IssueCategory,
     IssueSeverity,
     IssueStatus,
@@ -16,10 +18,11 @@ from app.core.constants import (
     Shift,
 )
 from app.models import Restroom
+from app.schemas.equipment import EquipmentCreate, MaintenanceRecordCreate, ScrapCreate
 from app.schemas.inspection import InspectionCreate, InspectionItem
 from app.schemas.issue import IssueCreate, IssueStatusUpdate
 from app.schemas.restroom import RestroomCreate
-from app.services import inspection_service, issue_service, restroom_service
+from app.services import equipment_service, inspection_service, issue_service, restroom_service
 
 RANDOM_SEED = 20240913
 
@@ -78,6 +81,64 @@ CATEGORY_BY_ITEM = {
     "工具与标识摆放": IssueCategory.OTHER,
     "墙面门窗卫生": IssueCategory.CLEANING,
 }
+
+# 设备演示数据：(名称, 分类, 数量, 单位, 使用人, 公厕序号, 保养周期天, 购置于多少天前, 保养记录, 报废信息)
+# 保养记录：(多少天前, 保养内容, 更换部件, 保养人)；报废信息：(原因, 处置方式, 处置说明) 或 None
+EQUIPMENT_SPECS = [
+    (
+        "高压清洗机", EquipmentCategory.MACHINE, 1, "台", "王秀兰", 0, 30, 200,
+        [
+            (68, "更换密封圈、清洗泵头滤网", "高压密封圈", "设备员周师傅"),
+            (8, "整机清洗、管路压力检查", None, "设备员周师傅"),
+        ],
+        None,
+    ),
+    (
+        "驾驶式洗地机", EquipmentCategory.MACHINE, 1, "台", "李国强", 1, 30, 400,
+        [(40, "刷盘更换、电瓶检测", "刷盘×2", "设备员周师傅")],
+        None,
+    ),
+    (
+        "吸尘吸水机", EquipmentCategory.MACHINE, 2, "台", "陈志远", 3, 60, 300,
+        [(55, "电机碳刷检查、更换尘袋", "集尘袋", "维修班杜师傅")],
+        None,
+    ),
+    (
+        "保洁电动三轮车", EquipmentCategory.VEHICLE, 1, "辆", "刘桂芳", 4, 90, 260,
+        [(80, "刹车调试、轮胎补气、链条上油", None, "维修班杜师傅")],
+        None,
+    ),
+    (
+        "拖把榨水桶套装", EquipmentCategory.TOOL, 20, "套", "周晓燕", 6, 15, 120,
+        [(20, "拖把头全部更换、桶身消毒", "拖把头×20", "周晓燕")],
+        None,
+    ),
+    (
+        "防滑警示牌", EquipmentCategory.TOOL, 30, "个", "孙鹏", 5, 30, 10,
+        [],
+        None,
+    ),
+    (
+        "自动喷香机", EquipmentCategory.ELECTRICAL, 6, "台", "吴建华", 7, 30, 150,
+        [(26, "更换香薰罐与电池、喷头清洗", "香薰罐×6", "吴建华")],
+        None,
+    ),
+    (
+        "干手器", EquipmentCategory.ELECTRICAL, 4, "台", "郑淑珍", 8, 60, 320,
+        [(70, "滤网清灰、感应器校准", None, "维修班杜师傅")],
+        None,
+    ),
+    (
+        "玻璃清洁套装", EquipmentCategory.TOOL, 15, "套", "王秀兰", 0, 15, 5,
+        [],
+        None,
+    ),
+    (
+        "管道疏通机", EquipmentCategory.MACHINE, 1, "台", "何伟", 9, 45, 500,
+        [(90, "更换疏通弹簧、机体除锈", "疏通弹簧", "设备员周师傅")],
+        ("电机进水烧毁，维修成本过高", DisposalMethod.RECYCLE, "已交物资回收站，回收单 HS-20260911"),
+    ),
+]
 
 
 def _build_items(rng: random.Random, quality: float) -> list[InspectionItem]:
@@ -190,7 +251,45 @@ def seed_database(db: Session, *, reset: bool = False) -> int:
         created += 1
         _advance_issue(db, issue.id, age_days, rng)
 
+    _seed_equipment(db, restrooms, now)
+
     return created
+
+
+def _seed_equipment(db: Session, restrooms: list, now: datetime) -> None:
+    """写入工具与设备台账演示数据，覆盖正常/临近到期/已逾期/已报废四种保养状态。"""
+    for name, category, quantity, unit, custodian, room_idx, cycle, bought_days_ago, records, scrap in EQUIPMENT_SPECS:
+        equipment = equipment_service.create_equipment(
+            db,
+            EquipmentCreate(
+                name=name,
+                category=category,
+                quantity=quantity,
+                unit=unit,
+                custodian=custodian,
+                restroom_id=restrooms[room_idx].id,
+                maintenance_cycle_days=cycle,
+                purchase_date=(now - timedelta(days=bought_days_ago)).date(),
+            ),
+        )
+        for days_ago, content, parts, operator in records:
+            equipment_service.add_maintenance_record(
+                db,
+                equipment.id,
+                MaintenanceRecordCreate(
+                    maintained_at=now - timedelta(days=days_ago),
+                    content=content,
+                    replaced_parts=parts,
+                    operator=operator,
+                ),
+            )
+        if scrap:
+            reason, disposal, note = scrap
+            equipment_service.scrap_equipment(
+                db,
+                equipment.id,
+                ScrapCreate(reason=reason, disposal_method=disposal, remark=note),
+            )
 
 
 def _advance_issue(db: Session, issue_id: int, age_days: int, rng: random.Random) -> None:

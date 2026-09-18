@@ -43,6 +43,14 @@ export const STATUS_TONES = {
   已关闭: 'tag-neutral',
   正常: 'tag-success',
   发现问题: 'tag-danger',
+  在用: 'tag-success',
+  已报废: 'tag-neutral',
+};
+
+export const MAINTENANCE_DUE_TONES = {
+  已逾期: 'tag-danger',
+  临近到期: 'tag-warning',
+  正常: 'tag-success',
 };
 
 export const SEVERITY_TONES = {
@@ -57,6 +65,18 @@ export function statusTone(status) {
 
 export function severityTone(severity) {
   return SEVERITY_TONES[severity] || 'tag-neutral';
+}
+
+export function maintenanceDueTone(due) {
+  return MAINTENANCE_DUE_TONES[due] || 'tag-neutral';
+}
+
+/** 距下次保养天数的可读文案，负数表示已逾期天数。 */
+export function formatMaintenanceDays(days) {
+  if (days === null || days === undefined) return '-';
+  if (days < 0) return `已逾期 ${-days} 天`;
+  if (days === 0) return '今天到期';
+  return `${days} 天后`;
 }
 
 export function scoreTone(score) {

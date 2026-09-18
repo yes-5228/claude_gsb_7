@@ -10,6 +10,7 @@ import {
   CategoryPanel,
   DistrictPanel,
   IssueStatusPanel,
+  MaintenanceReminderPanel,
   RankingPanel,
   RecentInspectionsPanel,
   RecentIssuesPanel,
@@ -92,6 +93,19 @@ export default function DashboardPage() {
                 tone="info"
                 foot={`本月完成 ${overview.issue_done_this_month} 条`}
               />
+              <StatCard
+                label="设备保养提醒"
+                value={overview.equipment_maintenance_overdue + overview.equipment_maintenance_upcoming}
+                unit="台"
+                tone={
+                  overview.equipment_maintenance_overdue > 0
+                    ? 'danger'
+                    : overview.equipment_maintenance_upcoming > 0
+                      ? 'warning'
+                      : 'primary'
+                }
+                foot={`在册设备 ${overview.equipment_total} 台 · 已逾期 ${overview.equipment_maintenance_overdue} 台 · 临近 ${overview.equipment_maintenance_upcoming} 台`}
+              />
             </div>
 
             <div className="grid-2">
@@ -129,6 +143,10 @@ export default function DashboardPage() {
             <div className="grid-2">
               <RecentIssuesPanel items={data.recent_issues} />
               <RecentInspectionsPanel items={data.recent_inspections} />
+            </div>
+
+            <div className="grid-2">
+              <MaintenanceReminderPanel items={data.maintenance_reminders} />
             </div>
           </>
         ) : null}

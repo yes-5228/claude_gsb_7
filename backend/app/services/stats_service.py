@@ -6,13 +6,15 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.constants import (
+    MAINTENANCE_REMIND_DAYS,
     OPEN_ISSUE_STATUSES,
+    EquipmentStatus,
     IssueCategory,
     IssueSeverity,
     IssueStatus,
     RestroomStatus,
 )
-from app.models import Inspection, Issue, Restroom
+from app.models import Equipment, Inspection, Issue, Restroom
 from app.schemas.stats import (
     CategoryStat,
     DashboardStats,
@@ -22,7 +24,7 @@ from app.schemas.stats import (
     RestroomRankItem,
     TrendPoint,
 )
-from app.services import inspection_service, issue_service
+from app.services import equipment_service, inspection_service, issue_service
 
 
 def _count(db: Session, model, *conditions) -> int:
@@ -51,6 +53,9 @@ def overview(db: Session) -> OverviewStats:
     closed_count = _count(db, Issue, Issue.status == IssueStatus.CLOSED.value)
     finished = done_count + closed_count
 
+    today = now.date()
+    equipment_active = Equipment.status != EquipmentStatus.SCRAPPED.value
+
     return OverviewStats(
         restroom_total=_count(db, Restroom),
         restroom_open=_count(db, Restroom, Restroom.status == RestroomStatus.NORMAL.value),
@@ -74,6 +79,17 @@ def overview(db: Session) -> OverviewStats:
             db, Issue, Issue.status == IssueStatus.DONE.value, Issue.updated_at >= month_start
         ),
         rectification_rate=round(finished / issue_total * 100, 1) if issue_total else 0.0,
+        equipment_total=_count(db, Equipment),
+        equipment_maintenance_overdue=_count(
+            db, Equipment, equipment_active, Equipment.next_maintenance_date < today
+        ),
+        equipment_maintenance_upcoming=_count(
+            db,
+            Equipment,
+            equipment_active,
+            Equipment.next_maintenance_date >= today,
+            Equipment.next_maintenance_date <= today + timedelta(days=MAINTENANCE_REMIND_DAYS),
+        ),
     )
 
 
@@ -232,6 +248,7 @@ def dashboard(db: Session, trend_days: int = 14) -> DashboardStats:
     recent_inspections, _ = inspection_service.list_inspections(
         db, page=1, page_size=5, sort_by="inspect_time"
     )
+    overdue, upcoming = equipment_service.maintenance_reminders(db)
     return DashboardStats(
         overview=overview(db),
         issue_by_status=issue_by_status(db),
@@ -242,4 +259,7 @@ def dashboard(db: Session, trend_days: int = 14) -> DashboardStats:
         top_restrooms=restroom_ranking(db),
         recent_issues=[issue_service.to_out(issue) for issue in recent_issues],
         recent_inspections=[inspection_service.to_out(item) for item in recent_inspections],
+        maintenance_reminders=[
+            equipment_service.to_out(item) for item in (overdue + upcoming)[:6]
+        ],
     )

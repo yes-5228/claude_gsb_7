@@ -10,6 +10,10 @@ from app.core.constants import (
     INSPECTION_CHECK_ITEMS,
     INSPECTION_ITEM_MAX_SCORE,
     ISSUE_TRANSITIONS,
+    MAINTENANCE_REMIND_DAYS,
+    DisposalMethod,
+    EquipmentCategory,
+    EquipmentStatus,
     IssueCategory,
     IssueSeverity,
     IssueStatus,
@@ -40,6 +44,10 @@ class Dictionaries(BaseModel):
     inspection_check_items: list[str]
     inspection_item_max_score: int
     issue_transitions: dict[str, list[str]]
+    equipment_category: list[str]
+    equipment_status: list[str]
+    disposal_method: list[str]
+    maintenance_remind_days: int
 
 
 @router.get("/dictionaries", response_model=Dictionaries, summary="枚举字典")
@@ -54,6 +62,10 @@ def get_dictionaries() -> Dictionaries:
         inspection_check_items=list(INSPECTION_CHECK_ITEMS),
         inspection_item_max_score=INSPECTION_ITEM_MAX_SCORE,
         issue_transitions={key: list(value) for key, value in ISSUE_TRANSITIONS.items()},
+        equipment_category=[item.value for item in EquipmentCategory],
+        equipment_status=[item.value for item in EquipmentStatus],
+        disposal_method=[item.value for item in DisposalMethod],
+        maintenance_remind_days=MAINTENANCE_REMIND_DAYS,
     )
 
 

@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom';
 
 import BarList from '../../components/BarList.jsx';
 import DataTable from '../../components/DataTable.jsx';
-import { ScorePill, SeverityTag, StatusTag } from '../../components/Tags.jsx';
-import { formatDateTime } from '../../utils/format.js';
+import { MaintenanceDueTag, ScorePill, SeverityTag, StatusTag } from '../../components/Tags.jsx';
+import { formatDate, formatDateTime, formatMaintenanceDays } from '../../utils/format.js';
 
 const STATUS_COLORS = {
   待整改: '#dc2626',
@@ -169,6 +169,47 @@ export function RecentInspectionsPanel({ items }) {
         ]}
         rows={items || []}
         emptyText="暂无巡查记录"
+      />
+    </section>
+  );
+}
+
+export function MaintenanceReminderPanel({ items }) {
+  return (
+    <section className="card">
+      <div className="card-title">
+        <h3>设备保养提醒</h3>
+        <Link className="hint" to="/equipment">
+          前往设备台账 →
+        </Link>
+      </div>
+      <DataTable
+        columns={[
+          {
+            key: 'name',
+            title: '设备',
+            wrap: true,
+            render: (row) => <Link to={`/equipment/${row.id}`}>{row.name}</Link>,
+          },
+          { key: 'custodian', title: '使用人', render: (row) => row.custodian || '-' },
+          {
+            key: 'next_maintenance_date',
+            title: '下次保养',
+            render: (row) => formatDate(row.next_maintenance_date),
+          },
+          {
+            key: 'days_to_maintenance',
+            title: '剩余',
+            render: (row) => formatMaintenanceDays(row.days_to_maintenance),
+          },
+          {
+            key: 'maintenance_due',
+            title: '状态',
+            render: (row) => <MaintenanceDueTag due={row.maintenance_due} />,
+          },
+        ]}
+        rows={items || []}
+        emptyText="暂无待保养设备"
       />
     </section>
   );
