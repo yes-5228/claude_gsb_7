@@ -9,6 +9,7 @@ import { useAsync } from '../../hooks/useAsync.js';
 import {
   CategoryPanel,
   DistrictPanel,
+  EquipmentRemindersPanel,
   IssueStatusPanel,
   RankingPanel,
   RecentInspectionsPanel,
@@ -92,6 +93,13 @@ export default function DashboardPage() {
                 tone="info"
                 foot={`本月完成 ${overview.issue_done_this_month} 条`}
               />
+              <StatCard
+                label="设备保养超期"
+                value={overview.equipment_maintenance_overdue}
+                unit="台"
+                tone={overview.equipment_maintenance_overdue > 0 ? 'danger' : 'primary'}
+                foot={`${overview.equipment_maintenance_upcoming} 台 7 日内到期 · 在用 ${overview.equipment_in_use} 台`}
+              />
             </div>
 
             <div className="grid-2">
@@ -130,6 +138,8 @@ export default function DashboardPage() {
               <RecentIssuesPanel items={data.recent_issues} />
               <RecentInspectionsPanel items={data.recent_inspections} />
             </div>
+
+            <EquipmentRemindersPanel reminders={data.equipment_reminders} />
           </>
         ) : null}
       </div>

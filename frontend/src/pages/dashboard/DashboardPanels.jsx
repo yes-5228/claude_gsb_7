@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import BarList from '../../components/BarList.jsx';
 import DataTable from '../../components/DataTable.jsx';
 import { ScorePill, SeverityTag, StatusTag } from '../../components/Tags.jsx';
-import { formatDateTime } from '../../utils/format.js';
+import { formatDate, formatDateTime } from '../../utils/format.js';
 
 const STATUS_COLORS = {
   待整改: '#dc2626',
@@ -169,6 +169,54 @@ export function RecentInspectionsPanel({ items }) {
         ]}
         rows={items || []}
         emptyText="暂无巡查记录"
+      />
+    </section>
+  );
+}
+
+export function EquipmentRemindersPanel({ reminders }) {
+  const overdue = (reminders?.overdue || []).map((item) => ({ ...item, level: 'overdue' }));
+  const upcoming = (reminders?.upcoming || []).map((item) => ({ ...item, level: 'upcoming' }));
+  const rows = [...overdue, ...upcoming];
+  return (
+    <section className="card">
+      <div className="card-title">
+        <h3>设备保养提醒</h3>
+        <Link className="hint" to="/equipment">
+          前往台账 →
+        </Link>
+      </div>
+      <DataTable
+        columns={[
+          {
+            key: 'name',
+            title: '设备',
+            render: (row) => <Link to={`/equipment/${row.equipment_id}`}>{row.name}</Link>,
+          },
+          { key: 'category', title: '分类' },
+          { key: 'assignee', title: '使用人', render: (row) => row.assignee || '-' },
+          { key: 'maintenance_cycle', title: '保养周期' },
+          {
+            key: 'next_maintenance_at',
+            title: '下次保养',
+            render: (row) => formatDate(row.next_maintenance_at),
+          },
+          {
+            key: 'level',
+            title: '提醒',
+            render: (row) =>
+              row.level === 'overdue' ? (
+                <span className="tag tag-danger">已超期 {row.days} 天</span>
+              ) : (
+                <span className="tag tag-warning">
+                  {row.days === 0 ? '今日到期' : `${row.days} 天后到期`}
+                </span>
+              ),
+          },
+        ]}
+        rows={rows}
+        rowKey={(row) => row.equipment_id}
+        emptyText="暂无保养到期设备"
       />
     </section>
   );

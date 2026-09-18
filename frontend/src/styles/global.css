@@ -349,6 +349,12 @@ table.data-table td.wrap {
   color: var(--danger);
 }
 
+.btn-link:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .action-group {
   display: flex;
   gap: 8px;

@@ -10,9 +10,15 @@ from app.core.constants import (
     INSPECTION_CHECK_ITEMS,
     INSPECTION_ITEM_MAX_SCORE,
     ISSUE_TRANSITIONS,
+    MAINTENANCE_CYCLE_DAYS,
+    MAINTENANCE_REMIND_DAYS,
+    DisposalMethod,
+    EquipmentCategory,
+    EquipmentStatus,
     IssueCategory,
     IssueSeverity,
     IssueStatus,
+    MaintenanceCycle,
     RestroomGrade,
     RestroomStatus,
     Shift,
@@ -40,6 +46,12 @@ class Dictionaries(BaseModel):
     inspection_check_items: list[str]
     inspection_item_max_score: int
     issue_transitions: dict[str, list[str]]
+    equipment_category: list[str]
+    equipment_status: list[str]
+    maintenance_cycle: list[str]
+    maintenance_cycle_days: dict[str, int]
+    maintenance_remind_days: int
+    disposal_method: list[str]
 
 
 @router.get("/dictionaries", response_model=Dictionaries, summary="枚举字典")
@@ -54,6 +66,12 @@ def get_dictionaries() -> Dictionaries:
         inspection_check_items=list(INSPECTION_CHECK_ITEMS),
         inspection_item_max_score=INSPECTION_ITEM_MAX_SCORE,
         issue_transitions={key: list(value) for key, value in ISSUE_TRANSITIONS.items()},
+        equipment_category=[item.value for item in EquipmentCategory],
+        equipment_status=[item.value for item in EquipmentStatus],
+        maintenance_cycle=[item.value for item in MaintenanceCycle],
+        maintenance_cycle_days={key.value: value for key, value in MAINTENANCE_CYCLE_DAYS.items()},
+        maintenance_remind_days=MAINTENANCE_REMIND_DAYS,
+        disposal_method=[item.value for item in DisposalMethod],
     )
 
 

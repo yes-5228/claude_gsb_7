@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field
 
+from app.schemas.equipment import MaintenanceReminders
 from app.schemas.inspection import InspectionOut
 from app.schemas.issue import IssueOut
 
@@ -24,6 +25,10 @@ class OverviewStats(BaseModel):
     issue_overdue: int = 0
     issue_done_this_month: int = 0
     rectification_rate: float = Field(default=0.0, description="整改完成率（百分比）")
+    equipment_total: int = 0
+    equipment_in_use: int = 0
+    equipment_maintenance_overdue: int = Field(default=0, description="保养已超期的设备数")
+    equipment_maintenance_upcoming: int = Field(default=0, description="保养即将到期的设备数")
 
 
 class TrendPoint(BaseModel):
@@ -69,3 +74,4 @@ class DashboardStats(BaseModel):
     top_restrooms: list[RestroomRankItem] = Field(default_factory=list)
     recent_issues: list[IssueOut] = Field(default_factory=list)
     recent_inspections: list[InspectionOut] = Field(default_factory=list)
+    equipment_reminders: MaintenanceReminders = Field(default_factory=MaintenanceReminders)

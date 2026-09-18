@@ -81,6 +81,53 @@ INSPECTION_CHECK_ITEMS: list[str] = [
     "墙面门窗卫生",
 ]
 
+
+class EquipmentCategory(StrEnum):
+    """保洁工具与设备分类。"""
+
+    CLEANING_TOOL = "保洁工具"
+    MACHINE = "机械设备"
+    TRANSPORT = "运输车辆"
+    SAFETY = "安全防护"
+    OTHER = "其他"
+
+
+class EquipmentStatus(StrEnum):
+    IN_USE = "在用"
+    SCRAPPED = "已报废"
+
+
+class MaintenanceCycle(StrEnum):
+    WEEKLY = "每周"
+    BIWEEKLY = "每半月"
+    MONTHLY = "每月"
+    QUARTERLY = "每季度"
+    SEMI_ANNUAL = "每半年"
+    YEARLY = "每年"
+
+
+# 保养周期对应的天数，用于推算下次保养日期
+MAINTENANCE_CYCLE_DAYS: dict[str, int] = {
+    MaintenanceCycle.WEEKLY: 7,
+    MaintenanceCycle.BIWEEKLY: 15,
+    MaintenanceCycle.MONTHLY: 30,
+    MaintenanceCycle.QUARTERLY: 90,
+    MaintenanceCycle.SEMI_ANNUAL: 180,
+    MaintenanceCycle.YEARLY: 365,
+}
+
+# 距下次保养日期多少天内视为「即将到期」并生成提醒
+MAINTENANCE_REMIND_DAYS = 7
+
+
+class DisposalMethod(StrEnum):
+    """报废工具的处置方式。"""
+
+    RECYCLE = "回收处理"
+    SELL = "废品变卖"
+    DESTROY = "集中销毁"
+    OTHER = "其他"
+
 INSPECTION_ITEM_MAX_SCORE = 10
 
 GRADE_EXCELLENT = "优秀"

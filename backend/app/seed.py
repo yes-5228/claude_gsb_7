@@ -8,18 +8,22 @@ from sqlalchemy.orm import Session
 
 from app.core.constants import (
     INSPECTION_CHECK_ITEMS,
+    DisposalMethod,
+    EquipmentCategory,
     IssueCategory,
     IssueSeverity,
     IssueStatus,
+    MaintenanceCycle,
     RestroomGrade,
     RestroomStatus,
     Shift,
 )
 from app.models import Restroom
+from app.schemas.equipment import EquipmentCreate, MaintenanceRecordCreate, ScrapRecordCreate
 from app.schemas.inspection import InspectionCreate, InspectionItem
 from app.schemas.issue import IssueCreate, IssueStatusUpdate
 from app.schemas.restroom import RestroomCreate
-from app.services import inspection_service, issue_service, restroom_service
+from app.services import equipment_service, inspection_service, issue_service, restroom_service
 
 RANDOM_SEED = 20240913
 
@@ -78,6 +82,92 @@ CATEGORY_BY_ITEM = {
     "工具与标识摆放": IssueCategory.OTHER,
     "墙面门窗卫生": IssueCategory.CLEANING,
 }
+
+# 工具设备演示数据：保养记录按时间从旧到新排列，末条决定下次保养日期
+# (名称, 分类, 数量, 单位, 使用人, 存放地点, 保养周期, 保养记录, 报废记录)
+EQUIPMENT_SPECS = [
+    (
+        "高压冲洗机", EquipmentCategory.MACHINE, 2, "台", "李国强", "城东设备间",
+        MaintenanceCycle.MONTHLY,
+        [
+            (75, "清洗泵头与滤网，检查管路", "", 0),
+            (45, "更换密封圈，紧固接头", "密封圈", 35),
+        ],
+        [],
+    ),
+    (
+        "驾驶式洗地机", EquipmentCategory.MACHINE, 1, "台", "周晓燕", "体育中心保洁间",
+        MaintenanceCycle.MONTHLY,
+        [
+            (56, "清洗吸水扒，检查电瓶", "", 0),
+            (26, "更换刷盘，校正行走轮", "刷盘", 120),
+        ],
+        [],
+    ),
+    (
+        "吸水吸尘器", EquipmentCategory.MACHINE, 3, "台", "孙鹏", "城西仓库",
+        MaintenanceCycle.QUARTERLY,
+        [(100, "清理尘桶与滤芯，检查电机碳刷", "滤芯", 45)],
+        [],
+    ),
+    (
+        "拖把", EquipmentCategory.CLEANING_TOOL, 40, "把", "王秀兰", "人民广场工具间",
+        MaintenanceCycle.MONTHLY,
+        [
+            (40, "集中清洗消毒，更换老化拖头", "拖把头 ×8", 24),
+            (10, "月度清点与消毒", "", 0),
+        ],
+        [(8, 6, "拖杆断裂、布条脱落无法使用", DisposalMethod.RECYCLE, "王秀兰")],
+    ),
+    (
+        "扫帚", EquipmentCategory.CLEANING_TOOL, 35, "把", "刘桂芳", "西城集贸工具间",
+        MaintenanceCycle.QUARTERLY,
+        [(20, "季度清点，更换开丝严重的扫帚", "扫帚头 ×5", 30)],
+        [(15, 3, "帚苗严重开丝无法清扫", DisposalMethod.DESTROY, "刘桂芳")],
+    ),
+    (
+        "玻璃刮水器", EquipmentCategory.CLEANING_TOOL, 15, "把", "赵敏", "和平路工具间",
+        MaintenanceCycle.SEMI_ANNUAL,
+        [(30, "更换老化胶条", "胶条 ×6", 18)],
+        [],
+    ),
+    (
+        "保洁三轮车", EquipmentCategory.TRANSPORT, 4, "辆", "陈志远", "火车站车队",
+        MaintenanceCycle.MONTHLY,
+        [
+            (58, "链条上油，检查车胎气压", "", 0),
+            (28, "更换刹车线，紧固车斗", "刹车线", 25),
+        ],
+        [],
+    ),
+    (
+        "警示牌", EquipmentCategory.SAFETY, 20, "个", "吴建华", "政务中心仓库",
+        MaintenanceCycle.QUARTERLY,
+        [(15, "擦洗牌面，更换破损支脚", "支脚 ×2", 10)],
+        [],
+    ),
+    (
+        "反光背心", EquipmentCategory.SAFETY, 30, "件", "郑淑珍", "老城区仓库",
+        MaintenanceCycle.SEMI_ANNUAL,
+        [],
+        [],
+    ),
+    (
+        "消毒液配比桶", EquipmentCategory.CLEANING_TOOL, 12, "个", "何伟", "三小旁工具间",
+        MaintenanceCycle.WEEKLY,
+        [
+            (17, "桶身除垢消毒", "", 0),
+            (10, "更换刻度贴纸，桶身消毒", "刻度贴纸", 6),
+        ],
+        [],
+    ),
+    (
+        "老式水桶车", EquipmentCategory.OTHER, 1, "辆", "何伟", "老城区仓库",
+        MaintenanceCycle.MONTHLY,
+        [(80, "车轮轴承上油", "", 0)],
+        [(20, 1, "车架锈蚀断裂无法修复", DisposalMethod.SELL, "郑淑珍")],
+    ),
+]
 
 
 def _build_items(rng: random.Random, quality: float) -> list[InspectionItem]:
@@ -190,7 +280,49 @@ def seed_database(db: Session, *, reset: bool = False) -> int:
         created += 1
         _advance_issue(db, issue.id, age_days, rng)
 
+    _seed_equipment(db, now)
     return created
+
+
+def _seed_equipment(db: Session, now: datetime) -> None:
+    """写入工具设备台账及保养、报废演示记录。"""
+    for name, category, quantity, unit, assignee, location, cycle, records, scraps in EQUIPMENT_SPECS:
+        equipment = equipment_service.create_equipment(
+            db,
+            EquipmentCreate(
+                name=name,
+                category=category,
+                quantity=quantity,
+                unit=unit,
+                assignee=assignee,
+                location=location,
+                maintenance_cycle=cycle,
+            ),
+        )
+        for days_ago, content, parts, cost in records:
+            equipment_service.add_maintenance_record(
+                db,
+                equipment.id,
+                MaintenanceRecordCreate(
+                    maintained_at=now - timedelta(days=days_ago),
+                    operator=assignee,
+                    content=content,
+                    replaced_parts=parts,
+                    cost=cost or None,
+                ),
+            )
+        for days_ago, scrap_quantity, reason, disposal, operator in scraps:
+            equipment_service.add_scrap_record(
+                db,
+                equipment.id,
+                ScrapRecordCreate(
+                    scrapped_at=now - timedelta(days=days_ago),
+                    quantity=scrap_quantity,
+                    reason=reason,
+                    disposal_method=disposal,
+                    operator=operator,
+                ),
+            )
 
 
 def _advance_issue(db: Session, issue_id: int, age_days: int, rng: random.Random) -> None:

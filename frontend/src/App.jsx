@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import Layout from './components/Layout.jsx';
 import DashboardPage from './pages/dashboard/DashboardPage.jsx';
+import EquipmentDetailPage from './pages/equipment/EquipmentDetailPage.jsx';
+import EquipmentListPage from './pages/equipment/EquipmentListPage.jsx';
 import InspectionListPage from './pages/inspections/InspectionListPage.jsx';
 import IssueDetailPage from './pages/issues/IssueDetailPage.jsx';
 import IssueListPage from './pages/issues/IssueListPage.jsx';
@@ -18,6 +20,8 @@ export default function App() {
         <Route path="/inspections" element={<InspectionListPage />} />
         <Route path="/issues" element={<IssueListPage />} />
         <Route path="/issues/:issueId" element={<IssueDetailPage />} />
+        <Route path="/equipment" element={<EquipmentListPage />} />
+        <Route path="/equipment/:equipmentId" element={<EquipmentDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

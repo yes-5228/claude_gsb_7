@@ -43,6 +43,8 @@ export const STATUS_TONES = {
   已关闭: 'tag-neutral',
   正常: 'tag-success',
   发现问题: 'tag-danger',
+  在用: 'tag-success',
+  已报废: 'tag-neutral',
 };
 
 export const SEVERITY_TONES = {
@@ -70,4 +72,19 @@ export function isOverdue(deadline, status) {
   if (!deadline) return false;
   if (['已完成', '已关闭'].includes(status)) return false;
   return new Date(deadline).getTime() < Date.now();
+}
+
+/**
+ * 设备保养到期状态：已超期 / N 日内到期，否则返回 null。
+ * remindDays 与后端 MAINTENANCE_REMIND_DAYS 对齐。
+ */
+export function maintenanceDueState(nextAt, status, remindDays = 7) {
+  if (!nextAt || status === '已报废') return null;
+  const ts = new Date(nextAt).getTime();
+  if (Number.isNaN(ts)) return null;
+  const now = Date.now();
+  if (ts < now) return { label: '保养超期', tone: 'tag-danger' };
+  const days = Math.ceil((ts - now) / 86400000);
+  if (days <= remindDays) return { label: days === 0 ? '今日到期' : `${days} 日内到期`, tone: 'tag-warning' };
+  return null;
 }
